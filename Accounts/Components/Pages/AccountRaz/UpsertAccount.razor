@@ -1,0 +1,106 @@
+﻿@page "/upsertAccount/{Id:guid}"
+@inject AccountServices _accountServices
+@inject AccountTypeServicse _accountTypeServicse
+<h3>UpsertAccount</h3>
+
+<MudGrid>
+    <MudItem xs="4">
+        <MudAutocomplete T="AccountType" Label="نوع الحساب" @bind-Value="_accounts.AccountType"
+                         SearchFunc="@Search2" ToStringFunc="@(e=> e==null?null : $"{e.AccName}")" />
+    </MudItem>
+</MudGrid>
+
+<MudPaper>
+    <MudGrid>
+        <MudItem xs="2">
+            <MudTextField @bind-Value="_accounts.AccNumer" Label="رقم الحساب" Variant="Variant.Outlined"></MudTextField>
+        </MudItem>
+        <MudItem xs="4">
+            <MudTextField @bind-Value="_accounts.AccName" Label="اسم الحساب" Variant="Variant.Outlined"></MudTextField>
+        </MudItem>
+
+        <MudPaper>
+            <MudGrid>
+
+                <MudItem xs="12">
+                    <MudCheckBox @bind-Value="@CheckBox1" Color="Color.Secondary"></MudCheckBox>
+
+                    <MudAutocomplete T="Accountss" Label="نوع الحساب" @bind-Value="_accounts.Parent"
+                                     Disabled="!CheckBox1" SearchFunc="@Search" ToStringFunc="@(e=> e==null?null : $"{e.AccName}")" />
+                </MudItem>
+            </MudGrid>
+
+        </MudPaper>
+        <MudSpacer />
+        <MudRadioGroup @bind-Value="_accounts.IsProfit">
+            <MudRadio Value="true" Color="Color.Primary" Dense="true">ميزانية</MudRadio>
+            <MudRadio Value="false" Color="Color.Secondary" Dense="false">قائمة الدخل</MudRadio>
+        </MudRadioGroup>
+
+        <MudItem xs="4">
+            <MudTextField @bind-Value="_accounts.Details" Label="ملاحظات" Variant="Variant.Outlined"></MudTextField>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+<br />
+<MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Save"
+           IconColor="Color.Primary" Size="Size.Large" OnClick="Upsert">Save</MudButton>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+    public bool CheckBox1 { get; set; } = false;
+    public bool Dense_Radio { get; set; } = true;
+
+    Accountss _accounts = new();
+    AccountType _accountType = new();
+    IEnumerable<Accountss>? accounts;
+    IEnumerable<AccountType>? accountTypes;
+
+    // دالة البناء
+    protected override async Task OnInitializedAsync()
+    {
+        // Show list
+        accountTypes = await _accountTypeServicse.GetAllAccountTypes();
+        accounts = await _accountServices.GetAllAccounts();
+
+        if (Id != Guid.Empty) _accounts = await _accountServices.GetAccountByIdAsync(Id);
+        if (_accounts.Parent != null) CheckBox1 = true;
+    }
+
+    private async Task<IEnumerable<Accountss>> Search(string value)
+    {
+        // if text is null or empty, show complete list
+        if (string.IsNullOrEmpty(value))
+            return accounts;
+        return accounts.Where(x => x.AccName.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+    private async Task<IEnumerable<AccountType>> Search2(string value)
+    {
+        // if text is null or empty, show complete list
+        if (string.IsNullOrEmpty(value))
+            return accountTypes;
+        return accountTypes.Where(x => x.AccName.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+  
+    async void Upsert()
+    {
+        ResponseVM response = new ResponseVM();
+        if (Id != Guid.Empty) response = await _accountServices.EditAccountAsync(Id,_accounts);
+        else response = await _accountServices.AddAccAsync(_accounts);
+
+        if (response.State)
+        {
+            _snackbar.Add(response.Message, Severity.Success);
+            _navigation.NavigateTo("/listAccounts");
+        }
+        else
+        {
+            _snackbar.Add(response.Message, Severity.Error);
+        }
+
+    }
+
+
+}
+

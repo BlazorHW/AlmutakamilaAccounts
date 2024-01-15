@@ -1,0 +1,86 @@
+﻿@page "/listJournal"
+@inject MakeJournalServices _makeJournalServices
+
+<h3>ListHead</h3>
+
+<MudButton @onclick="()=>Upsert(Guid.Empty)"
+           Target="_blank"
+           Rel="nofollow noopener"
+           Variant="Variant.Outlined"
+           StartIcon="@Icons.Material.Filled.Add"
+           Color="Color.Error">
+    Add MakeJournal
+</MudButton>
+<MudTable Items="@journalHead" FixedHeader="@fixed_header" FixedFooter="@fixed_footer" Height="@(fixed_header || fixed_footer ?"400px":"")">
+    <HeaderContent>
+        <MudTh>ت</MudTh>
+        <MudTh>الوصف</MudTh>
+        <MudTh>رقم القيد</MudTh>
+        <MudTh>تاريخ القيد</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ت">@(journalHead.ToList().IndexOf(context) +1)</MudTd>
+            <MudTd DataLabel="الوصف">@context.Details</MudTd>
+            <MudTd DataLabel="رقم القيد">@context.EntryJournal</MudTd>
+            <MudTd DataLabel="تاريخ القيد">@context.Date.Value.ToShortDateString()</MudTd>
+            <MudTd>
+                <MudFab Color="Color.Success" StartIcon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="()=>Upsert(context.Id)" />
+                <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="()=>Deleted(context)" />
+            </MudTd>
+
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{100, 1000}" />
+        </PagerContent>
+    </MudTable>
+
+    <MudSwitch @bind-Checked="@fixed_header">Fixed Header</MudSwitch>
+    <MudSwitch @bind-Checked="@fixed_footer">Fixed Footer</MudSwitch>
+
+    <MudMessageBox @ref="mbox" Title="تنبيه" CancelText="إلغاء">
+        <MessageContent>
+            هل تريد الحذف   <b>@msgShow</b> ؟
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">حذف!</MudButton>
+    </YesButton>
+</MudMessageBox>
+@code {
+    bool fixed_header = true,loading = true;
+    bool fixed_footer = false;
+    int msgShow;
+
+    MudMessageBox mbox { get; set; }
+    private IEnumerable<MakeJournalHead> journalHead = new List<MakeJournalHead>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadingData();
+    }
+
+    async Task LoadingData()
+    {
+        loading = true;
+        StateHasChanged();
+        journalHead = await _makeJournalServices.GetAllJournalEntry();
+        loading = false;
+        StateHasChanged();
+    }
+
+    public void Upsert(Guid Id) => _navigation.NavigateTo($"/upsertJournal/{Id}");
+
+    async void Deleted(MakeJournalHead obj)
+    {
+        msgShow = obj.EntryJournal;
+        bool? res =await mbox.Show();
+        if (res == true)
+        {
+            var response = await _makeJournalServices.DeleteJournalAsync(obj.Id);
+            if (response.State)
+            {
+                _snackbar.Add(response.Message, Severity.Success);
+                await LoadingData();
+            }
+        }
+    }
+}

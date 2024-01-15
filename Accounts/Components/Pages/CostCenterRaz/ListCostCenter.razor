@@ -1,0 +1,91 @@
+﻿@page "/listCostCenter"
+
+@inject CostCenterServices _costCenterServices
+<h3>ListCostCenter</h3>
+
+
+<MudButton @onclick="()=>Upsert(Guid.Empty)"
+           Target="_blank"
+           Rel="nofollow noopener"
+           Variant="Variant.Outlined"
+           StartIcon="@Icons.Material.Filled.Add"
+           Color="Color.Error">
+    Add CostCenter
+</MudButton>
+<MudTable Items="@costCenters" FixedHeader="@fixed_header" FixedFooter="@fixed_footer" Height="@(fixed_header || fixed_footer ?"400px":"")">
+    <HeaderContent>
+        <MudTh>ت</MudTh>
+        <MudTh>رقم</MudTh>
+        <MudTh>حساب</MudTh>
+
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ت">@(costCenters.ToList().IndexOf(context) + 1)</MudTd>
+        <MudTd DataLabel="رقم">@context.AccNumer</MudTd>
+            <MudTd DataLabel="حساب">@context.AccName</MudTd>
+            <MudTd>
+                <MudFab Color="Color.Success" StartIcon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="()=>Upsert(context.Id)" />
+                <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="()=>Deleted(context)" />
+            </MudTd>
+
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{50, 100}" />
+        </PagerContent>
+    </MudTable>
+
+    <MudSwitch @bind-Checked="@fixed_header">Fixed Header</MudSwitch>
+    <MudSwitch @bind-Checked="@fixed_footer">Fixed Footer</MudSwitch>
+
+
+    <MudMessageBox @ref="mbox" Title="تنبيه" CancelText="إلغاء">
+        <MessageContent>
+            هل تريد الحذف   <b>@NameOfMbox</b> ؟
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">حذف!</MudButton>
+    </YesButton>
+</MudMessageBox>
+
+@code {
+    bool fixed_header = true;
+    bool fixed_footer = false;
+    bool loding = true;
+    string NameOfMbox = "";
+    MudMessageBox mbox { get; set; }
+    private IEnumerable<CostCenter> costCenters = new List<CostCenter>();
+
+    async Task LodaingData()
+    {
+        loding = true;
+        StateHasChanged();
+        costCenters = await _costCenterServices.GetAllCostCenter();
+        loding = false;
+        StateHasChanged();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await LodaingData();
+    }
+    
+
+    void Upsert(Guid Id) => _navigation.NavigateTo($"/UpsertCostCenter/{Id}");
+
+    public async void Deleted(CostCenter obj)
+    {
+        NameOfMbox = obj.AccName;
+        bool? res = await mbox.Show();
+        if (res == true)
+        {
+            var response = await _costCenterServices.DeleteCostCenterAsync(obj.Id);
+            if (response.State)
+            {
+                _snackbar.Add(response.Message, Severity.Success);
+                await LodaingData();
+            }
+        }
+
+    }
+
+}

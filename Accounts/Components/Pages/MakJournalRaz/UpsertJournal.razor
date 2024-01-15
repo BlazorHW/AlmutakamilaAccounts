@@ -1,0 +1,211 @@
+﻿@page "/upsertJournal/{Id:guid}"
+@inject MakeJournalServices _makeJournalServices
+@inject AccountServices _accountServices
+@inject CostCenterServices _costCenterServices
+
+<h3 style="color:#FFE0B2">سند قيد</h3>
+<MudPaper Height="200px" Width="80%">
+    <MudContainer Fixed="true" Style="background-color:#FFE0B2">
+        <MudPaper Height="800px" Width="135%" Square="true" Style="background-color:#FFF3E0">
+
+            <EditForm Model="_makeJournalHead.makeJournalsbodis" OnValidSubmit="Upsert">
+
+                <MudGrid>
+                    <MudItem xs="4">
+                        <MudDatePicker Label="التاريخ" Editable="true" @bind-Date="_makeJournalHead.Date"
+                                       Mask="@(new DateMask("dd/MM/yyyy"))" Placeholder="Select Date"
+                                       DateFormat="dd/MM/yyyy" For="@(() => _makeJournalHead.Date)" />
+                    </MudItem>
+
+                    <MudSpacer />
+                    <MudItem xs="2">
+                        <MudTextField @bind-Value="_makeJournalHead.EntryJournal" Label="رقم القيد"
+                                      For="@(() => _makeJournalHead.EntryJournal)" Variant="Variant.Outlined"></MudTextField>
+                    </MudItem>
+                </MudGrid>
+                <MudGrid>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="_makeJournalHead.Details" Label="بيان القيد"
+                                      For="@(() => _makeJournalHead.Details)" Variant="Variant.Text"></MudTextField>
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid>
+                    <MudItem xs="3">
+                        <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="AddAccount" />
+                    </MudItem>
+                    <MudSpacer />
+                    <MudItem xs="2">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Target="_blank"
+                                   Rel="nofollow noopener"
+                                   Variant="Variant.Outlined"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   Color="Color.Primary">
+                            Saved
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+
+            </EditForm>
+        </MudPaper>
+    </MudContainer>
+</MudPaper>
+@* عرض ليستة *@
+<MudPaper Height="400px" Width="80%">
+    <MudContainer Fixed="true" Style="background-color:#FFE0B2">
+        <MudPaper Height="400px" Width="135%" Square="true" Style="background-color:#FFF3E0">
+
+            <MudGrid>
+                <MudItem xs="5">
+                    <MudAutocomplete T="Accountss" Label="الحساب" @bind-Value="_accounts"
+                                     ToStringFunc="@(e=> e==null?null : $"{e.AccName}")" SearchFunc="@Search1" />
+                </MudItem>
+                <MudItem xs="7">
+                    <MudTextField @bind-Value="_makeJournalBody.Details" Label="البيان"
+                                  For="@(() => _makeJournalBody.Details)" Variant="Variant.Text"></MudTextField>
+                </MudItem>
+            </MudGrid>
+            <MudGrid>
+                <MudItem xs="5">
+                    <MudAutocomplete T="CostCenter" Label="مركز التكلفة" @bind-Value="_costCenter"
+                                     ToStringFunc="@(e=> e==null?null : $"{e.AccName}")" SearchFunc="@Search" />
+                </MudItem>
+                <MudItem xs="3">
+                    <MudTextField @bind-Value="_makeJournalBody.Debit" Label="مدين"
+                                  For="@(() => _makeJournalBody.Debit)" Variant="Variant.Filled"></MudTextField>
+                </MudItem>
+                <MudItem xs="3">
+                    <MudTextField @bind-Value="_makeJournalBody.Credit" Label="دائن"
+                                  For="@(() => _makeJournalBody.Credit)" Variant="Variant.Filled"></MudTextField>
+                </MudItem>
+            </MudGrid>
+
+
+            <MudTable Items="@_makeJournalHead.makeJournalsbodis" Style="background-color:#FFF3E0" FixedHeader="@fixed_header" FixedFooter="@fixed_footer" Height="@(fixed_header || fixed_footer ?"400px":"")">
+                <HeaderContent>
+                    <MudTh>ت</MudTh>
+                    <MudTh>الحساب</MudTh>
+                    <MudTh>البيان</MudTh>
+                    <MudTh>مدين</MudTh>
+                    <MudTh>دائن</MudTh>
+                    <MudTh>مركز التكلفة</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="ت">@(_makeJournalHead.makeJournalsbodis.ToList().IndexOf(context) + 1)</MudTd>
+                    <MudTd DataLabel="الحساب">@context.accountss?.AccName-@context.accountss?.AccNumer</MudTd>
+                        <MudTd DataLabel="البيان">@context.Details</MudTd>
+                        <MudTd DataLabel="مدين">@context.Debit</MudTd>
+                        <MudTd DataLabel="دائن">@context.Credit</MudTd>
+                        <MudTd DataLabel="مركز التكلفة">@context.costCenter?.AccName</MudTd>
+                        <MudTd>
+                            <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="()=>Deleted(context)" />
+                            <MudFab Color="Color.Success" StartIcon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="()=>Edit(context)" />
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager Style="background-color:white" PageSizeOptions="new int[]{50, 100}" />
+                    </PagerContent>
+                </MudTable>
+
+            </MudPaper>
+        </MudContainer>
+    </MudPaper>
+
+
+    @code {
+    [Parameter]
+    public Guid Id { get; set; }
+    bool fixed_header = true;
+    bool fixed_footer = false;
+    int _IndexBody = -1;
+
+
+    MakeJournalHead _makeJournalHead = new();
+    MakeJournalBody _makeJournalBody = new();
+    Accountss _accounts = new();
+    CostCenter _costCenter = new();
+
+    IEnumerable<Accountss>? accountses;
+    IEnumerable<CostCenter> costCenters;
+    private IEnumerable<MakeJournalHead>? journalhead = new List<MakeJournalHead>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        journalhead = await _makeJournalServices.GetAllJournalEntry();
+        accountses = await _accountServices.GetAllAccounts();
+        costCenters = await _costCenterServices.GetAllCostCenter();
+        // جلب بيانات من ليستة و عرضها في صفحة القيد
+        if (Id != Guid.Empty) _makeJournalHead = await _makeJournalServices.GetByIdJournal(Id);
+    }
+    async void Upsert()
+    {
+        ResponseVM response = new();
+        if (Id == Guid.Empty) response = await _makeJournalServices.AddJournalAsync(_makeJournalHead);
+        else response = await _makeJournalServices.EditJournalAsync(Id, _makeJournalHead);
+        if (response.State)
+        {
+            _snackbar.Add(response.Message, Severity.Success);
+            _makeJournalHead = await _makeJournalServices.GetByIdJournal(Id);
+            Id = _makeJournalHead.Id;
+            StateHasChanged();
+            _navigation.NavigateTo("/listJournal");
+        }
+    }
+
+    void AddAccount()
+    {
+        _makeJournalBody.accountss = _accounts;
+        _makeJournalBody.AccountssId = _accounts.Id;
+        _makeJournalBody.costCenter = _costCenter;
+        _makeJournalBody.CostCenterId = _costCenter.Id;
+        if (_IndexBody == -1) _makeJournalHead.makeJournalsbodis.Add(_makeJournalBody);
+        else
+        {
+            _makeJournalHead.makeJournalsbodis.ToList()[_IndexBody].accountss = _makeJournalBody.accountss;
+            _makeJournalHead.makeJournalsbodis.ToList()[_IndexBody].costCenter = _makeJournalBody.costCenter;
+            _makeJournalHead.makeJournalsbodis.ToList()[_IndexBody].Debit = _makeJournalBody.Debit;
+            _makeJournalHead.makeJournalsbodis.ToList()[_IndexBody].Credit = _makeJournalBody.Credit;
+            _makeJournalHead.makeJournalsbodis.ToList()[_IndexBody].Details = _makeJournalBody.Details;
+        }
+        _makeJournalBody = new();
+        _IndexBody = -1;
+    }
+
+    void Deleted(MakeJournalBody body)
+    {
+        _makeJournalHead.makeJournalsbodis.Remove(body);
+    }
+
+    void Edit(MakeJournalBody body)
+    {
+        _accounts = body.accountss;
+        _costCenter = body.costCenter;
+        _makeJournalBody = new()
+            {
+                Id = body.Id,
+                Credit = body.Credit,
+                Debit = body.Debit,
+                Details = body.Details,
+
+            };
+        _IndexBody = _makeJournalHead.makeJournalsbodis.ToList().IndexOf(body);
+    }
+
+
+
+    private async Task<IEnumerable<Accountss>> Search1(string value)
+    {
+        // if text is null or empty, show complete list
+        if (string.IsNullOrEmpty(value))
+            return accountses;
+        return accountses.Where(x => x.AccName.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+    private async Task<IEnumerable<CostCenter>> Search(string value)
+    {
+        // if text is null or empty, show complete list
+        if (string.IsNullOrEmpty(value))
+            return costCenters;
+        return costCenters.Where(x => x.AccName.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+}

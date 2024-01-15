@@ -1,0 +1,104 @@
+﻿@page "/listAccounts"
+@inject AccountServices _accountServices
+
+<h3>ListAccounts</h3>
+
+<MudButton @onclick="()=>Upsert2()"
+           Target="_blank"
+           Rel="nofollow noopener"
+           Variant="Variant.Outlined"
+           StartIcon="@Icons.Material.Filled.CallMissedOutgoing"
+           Color="Color.Tertiary">
+    CostCenter
+</MudButton>
+<MudButton @onclick="()=>Upsert(Guid.Empty)"
+           Target="_blank"
+           Rel="nofollow noopener"
+           Variant="Variant.Outlined"
+           StartIcon="@Icons.Material.Filled.Add"
+           Color="Color.Primary">
+    Add Account
+</MudButton>
+<MudTable Items="@account" FixedHeader="@fixed_header" FixedFooter="@fixed_footer" Height="@(fixed_header || fixed_footer ?"400px":"")">
+    <HeaderContent>
+        <MudTh>ت</MudTh>
+        <MudTh>الحساب</MudTh>
+        <MudTh>حساب فرعي</MudTh>
+        <MudTh>نوع الحساب</MudTh>
+        <MudTh>الميزانية - قائمة الدخل</MudTh>
+        <MudTh>ملاحظات</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ت">@(account.ToList().IndexOf(context) + 1)</MudTd>
+        <MudTd DataLabel="الحساب">@context.AccName-@context.AccNumer</MudTd>
+            <MudTd DataLabel="حساب فرعي">@context.Parent?.AccName</MudTd>
+            <MudTd DataLabel="نوع الحساب">@context.AccountType?.AccName</MudTd>
+            <MudTd DataLabel="الميزانية - قائمة الدخل">@(context.IsProfit ? "ميزانية" : "قائمة الدخل")</MudTd>
+            <MudTd DataLabel="ملاحظات">@context.Details</MudTd>
+            <MudTd>
+                <MudIconButton Size="Size.Small" Color="Color.Info" 
+                Icon="@Icons.Material.Filled.Edit" OnClick="()=>Upsert(context.Id)" />
+
+                <MudIconButton Size="Size.Small" Color="Color.Error" 
+                Icon="@Icons.Material.Filled.Delete" OnClick="()=>Deleted(context)" />
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{50, 100}" />
+        </PagerContent>
+    </MudTable>
+
+    <MudSwitch @bind-Checked="@fixed_header">Fixed Header</MudSwitch>
+    <MudSwitch @bind-Checked="@fixed_footer">Fixed Footer</MudSwitch>
+
+    <MudMessageBox @ref="mbox" Title="تنبيه" CancelText="إلغاء">
+        <MessageContent>
+            هل تريد الحذف   <b>@nameOfMsg</b> ؟
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">حذف!</MudButton>
+    </YesButton>
+</MudMessageBox>
+@code {
+    bool fixed_header = true;
+    bool fixed_footer = false;
+    bool loding;
+    string nameOfMsg = "";
+    MudMessageBox mbox { get; set; }
+    private IEnumerable<Accountss> account = new List<Accountss>();
+   
+    // دالة البناء
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadingData();
+    }
+    // دالة تحديث العرض الشاشة
+    async Task LoadingData()
+    {
+        loding = true;
+        StateHasChanged();
+        account = await _accountServices.GetAllAccounts();
+        loding = false;
+        StateHasChanged();
+    }
+    void Upsert(Guid Id) => _navigation.NavigateTo("/upsertAccount/" + Id);
+
+    void Upsert2() => _navigation.NavigateTo("/listCostCenter");
+    // Delete
+    public async void Deleted(Accountss obj)
+    {
+        nameOfMsg = obj.AccName;
+        bool? res = await mbox.Show();
+        if (res == true)
+        {
+            var response = await _accountServices.DeleteAccountAsync(obj.Id);
+            if (response.State)
+            {
+                _snackbar.Add(response.Message, Severity.Success);
+                await LoadingData();
+            }
+        }
+    }
+
+}

@@ -1,0 +1,67 @@
+﻿@page "/UpsertCostCenter/{Id:guid}"
+@inject CostCenterServices _costCenterServices
+
+<h3>اضافة مركز التكلفة</h3>
+
+<MudContainer>
+    <EditForm Model="@_costCenter" OnValidSubmit="@Upsert">
+        <MudPaper Width="500px" Height="150px">
+            <MudGrid>
+                <MudItem>
+                    <MudTextField T="int" @bind-Value="_costCenter.AccNumer" Label="رقم الحساب" For="@(() => _costCenter.AccNumer)" Variant="Variant.Outlined"></MudTextField>
+                </MudItem>
+                <MudItem>
+                    <MudTextField @bind-Value="_costCenter.AccName" Label="اسم الحساب" 
+                    For="@(() => _costCenter.AccName)" Variant="Variant.Outlined"></MudTextField>
+                </MudItem>
+            </MudGrid>
+            <br />
+            <MudButton ButtonType="ButtonType.Submit"
+                       Target="_blank"
+                       Rel="nofollow noopener"
+                       Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       Color="Color.Primary">
+                Saved
+            </MudButton>
+        </MudPaper>
+    </EditForm>
+</MudContainer>
+
+
+
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    CostCenter _costCenter = new();
+    // دالة البناء
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != Guid.Empty) _costCenter = await _costCenterServices.GetCostCenterById(Id);
+
+    }
+
+    async void Upsert()
+    {
+        ResponseVM response = new();
+        if (Id == Guid.Empty)
+        {
+            response = await _costCenterServices.AddCostCenterAsync(_costCenter);
+        }
+        else
+        {
+            response = await _costCenterServices.EditCostCenterAsync(Id, _costCenter);
+        }
+        if (response.State)
+        {
+            _snackbar.Add(response.Message, Severity.Success);
+            _navigation.NavigateTo("/listCostCenter");
+        }
+        else
+        {
+            _snackbar.Add(response.Message, Severity.Error);
+        }
+    }
+}
